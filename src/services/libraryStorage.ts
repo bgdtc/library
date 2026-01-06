@@ -48,7 +48,12 @@ async function saveFileHandle(handle: FileSystemFileHandle): Promise<void> {
     const db = await initDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    await store.put(handle, 'libraryFile');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.put(handle, 'libraryFile');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   } catch (error) {
     console.warn('Impossible de sauvegarder le handle de fichier:', error);
   }
@@ -60,8 +65,17 @@ async function getFileHandle(): Promise<FileSystemFileHandle | null> {
     const db = await initDB();
     const transaction = db.transaction([STORE_NAME], 'readonly');
     const store = transaction.objectStore(STORE_NAME);
-    const handle = await store.get('libraryFile');
-    return handle || null;
+    
+    return new Promise((resolve, reject) => {
+      const request = store.get('libraryFile');
+      request.onsuccess = () => {
+        const handle = request.result;
+        resolve(handle || null);
+      };
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
   } catch (error) {
     console.warn('Impossible de récupérer le handle de fichier:', error);
     return null;
@@ -158,18 +172,19 @@ export async function loadLibraryFromSavedFile(): Promise<Library | null> {
       return null;
     }
     
-    // Vérifier les permissions
-    const permissionStatus = await fileHandle.queryPermission({ mode: 'read' });
-    if (permissionStatus !== 'granted') {
-      // Demander la permission
-      const newPermission = await fileHandle.requestPermission({ mode: 'read' });
-      if (newPermission !== 'granted') {
+    // Essayer de lire le fichier directement
+    // Si les permissions ne sont plus valides, cela échouera et on retournera null
+    try {
+      const file = await fileHandle.getFile();
+      return await loadLibraryFromFile(file);
+    } catch (error: any) {
+      // Si l'erreur est liée aux permissions, on retourne null silencieusement
+      if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+        console.warn('Permissions de fichier expirées, veuillez réimporter');
         return null;
       }
+      throw error;
     }
-    
-    const file = await fileHandle.getFile();
-    return await loadLibraryFromFile(file);
   } catch (error) {
     console.warn('Impossible de charger depuis le fichier sauvegardé:', error);
     return null;
@@ -182,7 +197,12 @@ export async function resetFileHandle(): Promise<void> {
     const db = await initDB();
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    await store.delete('libraryFile');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete('libraryFile');
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   } catch (error) {
     console.warn('Impossible de réinitialiser le handle:', error);
   }

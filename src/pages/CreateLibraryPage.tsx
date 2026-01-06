@@ -20,7 +20,6 @@ import { saveLibrary } from '../services/libraryStorage';
 export function CreateLibraryPage() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [saving, setSaving] = useState(false);
 
   const handleBookScanned = (book: Book) => {
@@ -120,10 +119,8 @@ export function CreateLibraryPage() {
                   {books.map((book) => (
                     <Grid item xs={6} sm={4} key={book.isbn}>
                       <Box
-                        onClick={() => setSelectedBook(book)}
                         sx={{
                           position: 'relative',
-                          cursor: 'pointer',
                           '&:hover': {
                             opacity: 0.8,
                           },

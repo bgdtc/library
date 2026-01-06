@@ -103,10 +103,10 @@ export function useBookScanner(onScanSuccess: (isbn: string) => void) {
             stopScanning();
           }
         },
-        (errorMessage) => {
+        (_errorMessage) => {
           // Ignorer les erreurs de scan continu (not found, etc.)
           // Ne pas afficher ces erreurs car elles sont normales pendant le scan
-          // console.debug('Scan error (normal):', errorMessage);
+          // console.debug('Scan error (normal):', _errorMessage);
         }
       );
       // setIsScanning est déjà à true depuis le début
@@ -146,7 +146,11 @@ export function useBookScanner(onScanSuccess: (isbn: string) => void) {
     return () => {
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear().catch(() => {});
+        try {
+          scannerRef.current.clear();
+        } catch {
+          // Ignorer les erreurs de nettoyage
+        }
       }
     };
   }, []);
