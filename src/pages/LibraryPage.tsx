@@ -28,7 +28,7 @@ import { BookCard } from '../components/BookCard';
 import { BookDialog } from '../components/BookDialog';
 import { ImportDialog } from '../components/ImportDialog';
 import { Book, Library } from '../types/library';
-import { saveLibrary } from '../services/libraryStorage';
+import { saveLibrary, resetFileHandle } from '../services/libraryStorage';
 
 type ViewMode = 'grid' | 'list';
 
@@ -46,6 +46,7 @@ export function LibraryPage() {
   const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [ownerMenuAnchor, setOwnerMenuAnchor] = useState<null | HTMLElement>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Extraire tous les propriétaires uniques
   const uniqueOwners = Array.from(
@@ -119,9 +120,27 @@ export function LibraryPage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (library) {
-      saveLibrary(library);
+      setSaving(true);
+      try {
+        await saveLibrary(library);
+        // Mettre à jour aussi localStorage
+        localStorage.setItem('currentLibrary', JSON.stringify(library));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleChangeFileLocation = async () => {
+    if (library) {
+      // Réinitialiser le handle pour forcer la demande d'un nouvel emplacement
+      await resetFileHandle();
+      // Sauvegarder à nouveau (demandera un nouvel emplacement)
+      await handleSave();
     }
   };
 
@@ -154,11 +173,21 @@ export function LibraryPage() {
             Importer
           </Button>
           <Button
+            variant="outlined"
+            startIcon={<Save />}
+            onClick={handleChangeFileLocation}
+            sx={{ mr: 1 }}
+            title="Changer l'emplacement du fichier de sauvegarde"
+          >
+            Changer
+          </Button>
+          <Button
             variant="contained"
             startIcon={<Save />}
             onClick={handleSave}
+            disabled={saving}
           >
-            Sauvegarder
+            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
           </Button>
         </Stack>
 

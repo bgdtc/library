@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,20 +7,60 @@ import {
   Button,
   Stack,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import { LibraryBooks, CloudUpload } from '@mui/icons-material';
 import { ImportDialog } from '../components/ImportDialog';
 import { Library } from '../types/library';
+import { loadLibraryFromSavedFile } from '../services/libraryStorage';
 
 export function HomePage() {
   const navigate = useNavigate();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Essayer de charger automatiquement la bibliothèque depuis le fichier sauvegardé
+    const loadSavedLibrary = async () => {
+      try {
+        const library = await loadLibraryFromSavedFile();
+        if (library) {
+          // Stocker dans localStorage et rediriger
+          localStorage.setItem('currentLibrary', JSON.stringify(library));
+          navigate('/library');
+        }
+      } catch (error) {
+        console.warn('Impossible de charger la bibliothèque sauvegardée:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSavedLibrary();
+  }, [navigate]);
 
   const handleImport = (library: Library) => {
     // Stocker la bibliothèque dans le localStorage pour la page LibraryPage
     localStorage.setItem('currentLibrary', JSON.stringify(library));
     navigate('/library');
   };
+
+  if (loading) {
+    return (
+      <Container maxWidth="md">
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="md">

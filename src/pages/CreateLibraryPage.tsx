@@ -21,6 +21,7 @@ export function CreateLibraryPage() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const handleBookScanned = (book: Book) => {
     // Vérifier si le livre n'existe pas déjà
@@ -29,11 +30,13 @@ export function CreateLibraryPage() {
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (books.length === 0) {
       alert('Veuillez ajouter au moins un livre avant de terminer.');
       return;
     }
+
+    setSaving(true);
 
     const library: Library = {
       id: `library-${Date.now()}`,
@@ -45,9 +48,14 @@ export function CreateLibraryPage() {
     // Sauvegarder dans localStorage
     localStorage.setItem('currentLibrary', JSON.stringify(library));
     
-    // Télécharger le fichier JSON
-    saveLibrary(library);
+    // Sauvegarder le fichier (demandera où sauvegarder la première fois)
+    try {
+      await saveLibrary(library);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    }
 
+    setSaving(false);
     navigate('/library');
   };
 
@@ -135,9 +143,10 @@ export function CreateLibraryPage() {
                   size="large"
                   startIcon={<Check />}
                   onClick={handleFinish}
+                  disabled={saving}
                   sx={{ mt: 3 }}
                 >
-                  Terminer et sauvegarder
+                  {saving ? 'Sauvegarde...' : 'Terminer et sauvegarder'}
                 </Button>
               )}
             </Paper>
